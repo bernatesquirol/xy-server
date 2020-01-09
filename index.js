@@ -1,7 +1,6 @@
 const os       = require('os');
 const path     = require('path');
-const sh       = require('kool-shell');
-
+const sh       = require('shelljs')
 const express  = require('express');
 const siofu    = require('socketio-file-upload');
 const app      = express();
@@ -21,9 +20,9 @@ const paths = {
   trash: path.join(public, '.deleted')
 };
 const queue = require('./utils/queue')(paths);
-
+//console.log(queue.jobs, queue.currentJob)
+//queue.run()
 // -------------------------------------------------------------------------
-
 app.use(siofu.router);
 app.use(express.static(public));
 server.listen(port, () => {
@@ -38,7 +37,7 @@ server.listen(port, () => {
     }
   }
 
-  sh.success(`Server up and running on http://${addresses[0]}:${port}`);
+  console.log(`Server up and running on http://${addresses[0]}:${port}`);
 });
 
 // -------------------------------------------------------------------------
@@ -46,8 +45,8 @@ let progressTimer,
     progressTotal = 0;
 
 io.on('connection', (socket) => {
-  console.log(socket.id);
-
+  console.log('connection: ',socket.id)
+  
   socket.emit('handshake', {queue: queue.jobs, history: queue.history});
 
   let uploader = new siofu();
@@ -59,21 +58,22 @@ io.on('connection', (socket) => {
       let content = jsonfile.readFileSync(event.file.pathName);
       queue.push(content.name, content.buffer);
     } catch (e) {
-      sh.error(e);
+      console.log('ERROR: ',e);
       socket.emit('err', e);
     }
   });
 
   uploader.on('error', (err) => socket.emit('err', err.toString()));
-  queue.plotter.on('error', (err) => socket.emit('err', err.toString()));
+  queue.run()
+  queue.serial.on('error', (err) => socket.emit('err', err.toString()));
 
-  queue.plotter.on('job-start', (data) => {
+  queue.serial.on('job-start', (data) => {
     progressTimer = Date.now();
     socket.emit('job-progress', {
       job: queue.currentJob,
       progress: {
         value: 0,
-        total: data.job.getBuffer().length,
+        total: data.job.buffer.length,
       },
       time: {
         start: progressTimer,
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  queue.plotter.on('job-progress', (data) => {
+  queue.serial.on('job-progress', (data) => {
     socket.emit('job-progress', {
       job: queue.currentJob,
       progress: {
@@ -102,21 +102,21 @@ io.on('connection', (socket) => {
   queue.on('job-delete', (job) => socket.emit('job-delete', job));
 
   listen('job', (data) => {
-    sh.info(`${data.name} received.`);
+    console.log(`${data.name} received.`);
     if (data.buffer) {
-      sh.info(`${data.name} valid.`);
+      console.log(`${data.name} valid.`);
       queue.push(data.name, data.buffer);
     }
   });
 
-  listen('redraw', (jobID) => queue.redraw(jobID));
-  listen('delete', (jobID) => queue.trash(jobID));
-  listen('resume', () => queue.serial.resume());
-  listen('pause', () => queue.serial.pause());
-  listen('run', () => queue.run());
-  listen('cancel', () => queue.serial.disconnect());
+  listen('redraw', (jobID) => {console.log('redraw from client');queue.redraw(jobID)});
+  listen('delete', (jobID) => {console.log('delete from client');queue.trash(jobID)});
+  listen('resume', () => {console.log('resume from client'); queue.serial.resume()});
+  listen('pause', () => {console.log('pause from client');queue.serial.pause()});
+  listen('run', () => {console.log('run from client'); queue.run()});
+  listen('cancel', () => {console.log('cancel from client');queue.serial.disconnect()});
 
-  listen('shutdown', () => sh.exec('sudo', ['/sbin/shutdown', 'now']))
+  listen('shutdown', () => {console.log('shutdown from client'); sh.exec('sudo /sbin/shutdown now')})
 
   function listen(event, cb, validate = null) {
     validate = validate || function() { return true; };

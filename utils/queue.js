@@ -6,7 +6,6 @@ const eventEmitter = new events.EventEmitter();
 
 const getFiles = require('./getfiles');
 const jsonfile = require('jsonfile');
-const sh       = require('kool-shell');
 const _plotter  = require('xy-plotter');
 
 function Queue(paths) {
@@ -25,7 +24,8 @@ function Queue(paths) {
     run() {
       files = getFiles(paths.queue);
       jobs = getJobs(paths.queue, files);
-      plotterSerial = plotter.Serial('/dev/ttyUSB0', {
+      console.log(jobs)
+      plotterSerial = plotter.Serial('\\\\.\\COM4', {//'/dev/ttyUSB0'
         verbose: false,
         progressBar: false,
         disconnectOnJobEnd: true,
@@ -37,7 +37,7 @@ function Queue(paths) {
       let job = plotter.Job(name).setBuffer(buffer);
       let filename = checksum(buffer) + '.xy';
       let file = path.join(paths.queue, filename);
-      let duration = plotter.Stats(job).getDuration();
+      let duration = plotter.Stats(job).duration;
       jsonfile.writeFileSync(file, {
         name: name,
         duration: duration,
@@ -58,15 +58,15 @@ function Queue(paths) {
       }
 
       eventEmitter.emit('job-queue', jobs[filename]);
-      sh.success(`${name} successfully saved to ${file} (${getFilesizeInKiloBytes(file)}kb)`);
+      console.log(`${name} successfully saved to ${file} (${getFilesizeInKiloBytes(file)}kb)`);
     },
 
     archive(job) {
       return new Promise((resolve, reject) => {
         let newPath  = path.join(paths.history, job.file);
-        sh.info(`Archiving ${job.file}...`);
+        console.log(`Archiving ${job.file}...`);
         fs.rename(path.join(paths.queue, job.file), newPath, () => {
-          sh.success(`${job.file} archived.`);
+          console.log(`${job.file} archived.`);
           eventEmitter.emit('job-archive', jobs[job.file]);
           delete jobs[job.file];
           resolve();
@@ -78,9 +78,9 @@ function Queue(paths) {
       return new Promise((resolve, reject) => {
         if (jobs[jobID]) {
           let newPath  = path.join(paths.trash, jobID);
-          sh.info(`Deleting ${jobID}...`);
+          console.log(`Deleting ${jobID}...`);
           fs.rename(path.join(paths.queue, jobID), newPath, () => {
-            sh.success(`${jobID} deleted.`);
+            console.log(`${jobID} deleted.`);
             eventEmitter.emit('job-delete', jobs[jobID]);
             delete jobs[jobID];
             resolve();
@@ -110,11 +110,11 @@ function Queue(paths) {
         }
 
         fs.rename(file, path.join(paths.queue, jobID), () => {
-          sh.success(`${jobID} unarchived.`);
+          console.log(`${jobID} unarchived.`);
           eventEmitter.emit('job-queue', jobs[jobID]);
         });
 
-      } else sh.error(`${jobID} not found.`);
+      } else console.log(`${jobID} not found.`);
     },
 
     get jobs() {
@@ -152,12 +152,12 @@ function Queue(paths) {
     get currentJob() { return current; },
     set currentJob(job) {
       current = job;
-      sh.warning(`setting current job to ${job.name}`);
+      console.log(`setting current job to ${job.name}`);
       plotterSerial.send(job.plotter).then(() => {
         api.archive(job).then(() => {
             // yay
         });
-      }).catch((err) => sh.error(err));
+      }).catch((err) => console.log(err));
     },
 
     on(event, cb) { eventEmitter.on(event, cb); },
@@ -199,7 +199,7 @@ function Queue(paths) {
     try {
       return jsonfile.readFileSync(file);
     } catch (e) {
-      sh.error(e);
+      console.log(e);
       return null;
     }
   }
