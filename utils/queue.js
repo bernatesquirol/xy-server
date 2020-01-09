@@ -25,7 +25,7 @@ function Queue(paths) {
       files = getFiles(paths.queue);
       jobs = getJobs(paths.queue, files);
       console.log(jobs)
-      plotterSerial = plotter.Serial('\\\\.\\COM4', {//'/dev/ttyUSB0'
+      plotterSerial = plotter.Serial('/dev/ttyUSB0', {//'\\\\.\\COM4'
         verbose: false,
         progressBar: false,
         disconnectOnJobEnd: true,
