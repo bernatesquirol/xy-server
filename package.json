@@ -33,6 +33,6 @@
     "socket.io": "^1.5.1",
     "socket.io-client": "^1.5.1",
     "socketio-file-upload": "^0.5.2",
-    "xy-plotter": "github:arnaudjuracek/xy"
+    "xy-plotter": "github:bernatesquirol/xy"
   }
 }
