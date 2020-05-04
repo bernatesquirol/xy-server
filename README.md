@@ -13,7 +13,7 @@
 ## Installation
 
 ```sh
-svn export https://github.com/arnaudjuracek/xy-server/trunk xy-server
+svn export https://github.com/bernatesquirol/xy-server/trunk xy-server
 cd xy-server
 npm install
 ```
