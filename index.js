@@ -20,8 +20,8 @@ const paths = {
   trash: path.join(public, '.deleted')
 };
 const queue = require('./utils/queue')(paths);
-//console.log(queue.jobs, queue.currentJob)
-//queue.run()
+// console.log(queue.currentJob)
+queue.run()
 // -------------------------------------------------------------------------
 app.use(siofu.router);
 app.use(express.static(public));
